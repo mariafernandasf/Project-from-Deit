@@ -13,8 +13,14 @@ def build_dataset(is_train, args):
         dataset = datasets.CIFAR10(root = "data/", 
                                     train=is_train, 
                                     transform=transform,
-                                    download = False)
+                                    download = True)
         nb_classes = 10
+    elif args.data_set == "CIFAR100":
+        dataset = datasets.CIFAR100(root = "data/", 
+                                    train=is_train, 
+                                    transform=transform,
+                                    download = True)
+        nb_classes = 100
     else:
         raise Exception("Invalid dataset.")
     
@@ -51,5 +57,11 @@ def build_transform(is_train, args):
         t.append(transforms.CenterCrop(args.input_size))
 
     t.append(transforms.ToTensor())
-    t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    if args.data_set == 'CIFAR10':
+        mean = (0.4914, 0.4822, 0.4465)
+        stdev = (0.2470, 0.2435, 0.2616)
+    else:
+        mean = IMAGENET_DEFAULT_MEAN
+        stdev = IMAGENET_DEFAULT_STD
+    t.append(transforms.Normalize(mean, stdev))
     return transforms.Compose(t)

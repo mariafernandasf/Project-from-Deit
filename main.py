@@ -11,9 +11,10 @@ from datasets import build_dataset
 from engine import train_one_epoch, evaluate
 import utils 
 from augment import new_data_aug_generator
+import models_v2
+import models_v2_rope
 
 import numpy as np
-
 import torch
 
 # imports from timm
@@ -23,6 +24,7 @@ from timm.models import create_model
 from timm.data import Mixup
 from timm.optim import create_optimizer
 from timm.utils import NativeScaler, get_state_dict
+from timm.scheduler import create_scheduler
 
 #from timm.scheduler import create_scheduler
 
@@ -35,7 +37,6 @@ def main(args):
     seed = args.seed + utils.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
-
     
     # pull datasets and number of output classes for the classification task
     dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
@@ -49,7 +50,7 @@ def main(args):
         dataset_train, sampler=sampler_train,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        #pin_memory=args.pin_mem,
+        pin_memory=args.pin_mem,
         drop_last=True,
     )
     if args.ThreeAugment:
@@ -59,7 +60,7 @@ def main(args):
         dataset_val, sampler=sampler_val,
         batch_size=int(1.5 * args.batch_size),
         num_workers=args.num_workers,
-        #pin_memory=args.pin_mem,
+        pin_memory=args.pin_mem,
         drop_last=False
     )
 
@@ -139,7 +140,7 @@ def main(args):
     loss_scaler = NativeScaler()
 
     # init learning rate scheduler
-    #lr_scheduler, _ = create_scheduler(args, optimizer)
+    lr_scheduler, _ = create_scheduler(args, optimizer)
 
 
     # loss function
@@ -160,12 +161,48 @@ def main(args):
 
     output_dir = Path(args.output_dir)
 
+    # RESUME FROM CHECKPOINT 
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location='cpu')
+        model_without_ddp.load_state_dict(checkpoint['model'])
+        if not args.eval and 'optimizer' in checkpoint and 'lr_scheduler' in checkpoint and 'epoch' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+            args.start_epoch = checkpoint['epoch'] + 1
+            
+            if 'scaler' in checkpoint:
+                loss_scaler.load_state_dict(checkpoint['scaler'])
+        lr_scheduler.step(args.start_epoch)
+
     # PERFORM EVAL ONLY 
     if args.eval:
+        start_time = time.time()
         test_stats = evaluate(data_loader_val, model, device)
+        
+        # inference time
+        eval_time = time.time() - start_time
+        eval_time_str = str(datetime.timedelta(seconds=int(eval_time)))
+        
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
+        
+        if utils.is_main_process():
+            with (output_dir/'eval.txt').open("a") as f:
+                f.write(json.dumps({"num_test_images": len(dataset_val),
+                                    "acc1": f"{test_stats['acc1']:.1f}%",
+                                    "acc5": f"{test_stats['acc5']:.1f}%",
+                                    "loss": test_stats["loss"],
+                                    "eval_time_str": eval_time_str,
+                                    "eval_time_seconds": eval_time,
+                                    "input_size": args.input_size, 
+                                    # this assumes that the checkpoint path I am pulling was trained by
+                                    # the start_epoch and epochs parameters in args
+                                    "start_epoch": args.start_epoch,
+                                    "epochs": args.epochs
+                                }))
+                f.write("\n")
         return
     
+
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     max_accuracy = 0.0
@@ -179,15 +216,15 @@ def main(args):
         )
 
         # update learning rate
-        #lr_scheduler.step(epoch)
+        lr_scheduler.step(epoch)
         checkpoint_paths = [output_dir / 'checkpoint.pth']
         for checkpoint_path in checkpoint_paths:
             utils.save_on_master({
                 'model': model_without_ddp.state_dict(),
                 'optimizer': optimizer.state_dict(),
-                #'lr_scheduler': lr_scheduler.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict(),
                 'epoch': epoch,
-                'model_ema': get_state_dict(model_ema),
+                #'model_ema': get_state_dict(model_ema),
                 'scaler': loss_scaler.state_dict(),
                 'args': args,
             }, checkpoint_path)
@@ -204,9 +241,9 @@ def main(args):
                 utils.save_on_master({
                     'model': model_without_ddp.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    #'lr_scheduler': lr_scheduler.state_dict(),
+                    'lr_scheduler': lr_scheduler.state_dict(),
                     'epoch': epoch,
-                    'model_ema': get_state_dict(model_ema),
+                    #'model_ema': get_state_dict(model_ema),
                     'scaler': loss_scaler.state_dict(),
                     'args': args,
                 }, checkpoint_path)
@@ -228,10 +265,37 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-
-
+    if utils.is_main_process():
+        with (output_dir / 'training_time.txt').open("a") as f:
+            f.write(json.dumps({"start_epoch": args.start_epoch,
+                                "end_epoch": args.epochs,
+                                "training_time_str": total_time_str,
+                                "training_time_seconds": total_time}))
+            f.write("\n")
+ 
 if __name__ == '__main__':
-    args_dict = const.ARGS
-    args = argparse.Namespace(**args_dict)
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    torch.cuda.empty_cache()
+    args = const.ARGS
+
+    # add model name to output directory
+    args["output_dir"] = args["output_dir"] + args["model"]
+    print('\n\nOutput dir: {}\n\n'.format(args["output_dir"]))
+
+    Path(args["output_dir"]).mkdir(parents=True, exist_ok=True)
+
+    # set parameters that change depending on eval/ train to avoid human error
+    if args["eval"]:
+        args["batch_size"] = 128
+        args["finetune"] = args["output_dir"] + "/checkpoint.pth"
+        with (Path(args["output_dir"] + "/eval_params.txt")).open("a") as f:
+            f.write(json.dumps(args))
+            f.write("\n")
+    else:
+        args["batch_size"] = 256
+        args["finetune"] = ""
+        with (Path(args["output_dir"] + "/train_params.txt")).open("a") as f:
+            f.write(json.dumps(args))
+            f.write("\n")
+
+    args = argparse.Namespace(**args)
     main(args)

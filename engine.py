@@ -25,8 +25,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    check = metric_logger.log_every(data_loader, print_freq, header)
-
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
@@ -55,7 +53,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         loss_scaler(loss, optimizer, clip_grad=max_norm,
                     parameters=model.parameters(), create_graph=is_second_order)
 
-        #torch.cuda.synchronize()
+        torch.cuda.synchronize()
         if model_ema is not None:
             model_ema.update(model)
 
