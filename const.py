@@ -1,10 +1,10 @@
 ARGS = {
         # model params that need to be changed for eval
         "eval_crop_ratio": 1.0,
-        "eval": True, # SET TO TRUE IF PERFORM EVAL ONLY
-        "finetune": "ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
-        "batch_size": 128, # batch size for training: 256, batch size for eval: 128
-        "input_size" : 512,
+        "eval": False, # SET TO TRUE IF PERFORM EVAL ONLY
+        "finetune": "", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
+        "batch_size": 256, # batch size for training: 256, batch size for eval: 128
+        "input_size" : 224, # 224 for training
 
         "output_dir" : "ieor6617_output/",
         "train_mode" : True,
@@ -13,9 +13,9 @@ ARGS = {
         "pin_mem": False, # Pin CPU memory in DataLoader for more efficient transfer to GPU
         
         # model training params
-        "resume": "", # resume from checkpoint i.e. ieor6617_output/attempt 2/deit_small_patch16_LS/checkpoint.pth
-        "start_epoch": 0, # epoch to resume from
-        "epochs": 100, # num epochs
+        "resume": "ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth", # resume from checkpoint i.e. ieor6617_output/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth
+        "start_epoch": 100, # epoch to resume from
+        "epochs": 200, # num epochs
         "model" : "rope_axial_deit_small_patch16_LS",
         "drop"  : 0.0, # dropout rate
         "drop_path" : 0.0, # dropout path rate

@@ -1,3 +1,6 @@
+"""
+IEOR6617: I took this from https://github.com/naver-ai/rope-vit/tree/main/deit
+"""
 
 import math
 import sys

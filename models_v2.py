@@ -1,6 +1,8 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
-
+"""
+IEOR6617: I took this from https://github.com/naver-ai/rope-vit/tree/main/deit
+"""
 import torch
 import torch.nn as nn
 from functools import partial

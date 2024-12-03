@@ -2,6 +2,8 @@
 3Augment implementation
 Data-augmentation (DA) based on dino DA (https://github.com/facebookresearch/dino)
 and timm DA(https://github.com/rwightman/pytorch-image-models)
+
+IEOR6617: I took this from https://github.com/naver-ai/rope-vit/tree/main/deit
 """
 
 import random

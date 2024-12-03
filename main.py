@@ -1,4 +1,9 @@
 
+"""
+IEOR6617: This script is based on main.py from https://github.com/naver-ai/rope-vit/tree/main/deit
+
+"""
+
 import datetime
 import json
 import time

@@ -3,6 +3,9 @@ This code was originally obtained from:
 https://github.com/facebookresearch/deit
 and
 https://github.com/meta-llama/codellama/blob/main/llama/model.py
+
+IEOR6617: I took this from https://github.com/naver-ai/rope-vit/tree/main/deit
+
 """
 import torch
 import torch.nn as nn

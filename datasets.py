@@ -1,3 +1,9 @@
+"""
+IEOR6617: 
+    This is based on code from https://github.com/naver-ai/rope-vit/tree/main/deit
+
+    I added logic specific to CIFAR10
+"""
 
 import os 
 
