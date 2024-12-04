@@ -7,6 +7,7 @@ This is a pytorch implementation of the Performer described in 'Rethinking Atten
 import math 
 
 from models_v2 import vit_models, Layer_scale_init_Block, Attention
+from models_v2_rope import rope_vit_models, apply_rotary_emb
 from functools import partial
 
 import torch
@@ -152,7 +153,7 @@ class PerformerAttention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         
         # number of random features for performer
-        self.nb_features = 128
+        self.nb_features = 64
 
         inner_dim = head_dim * self.num_heads
         self.fast_attention = FastAttention(head_dim, 
@@ -176,26 +177,39 @@ class PerformerAttention(nn.Module):
         x = self.proj_drop(x)
         return x
 
-class RoPEPerformerAttention(Attention):
+class PerformerRoPEAttention(PerformerAttention):
     """Multi-head Attention block with relative position embeddings."""
     def forward(self, x, freqs_cis):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
         
+        # apply embeddings
         q[:, :, 1:], k[:, :, 1:] = apply_rotary_emb(q[:, :, 1:], k[:, :, 1:], freqs_cis=freqs_cis)
-        attn = (q * self.scale) @ k.transpose(-2, -1)
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        
+        x = self.fast_attention(q, k, v)
+        x = rearrange(x, 'b h n d -> b n (h d)')
         x = self.proj(x)
         x = self.proj_drop(x)
         
         return x
 
+class Performer_RoPE_Layer_scale_init_Block(Layer_scale_init_Block):
+    # taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
+    # with slight modifications
+    def __init__(self, *args, **kwargs):
+        kwargs["Attention_block"] = PerformerRoPEAttention
+        super().__init__(*args, **kwargs)
+
+    def forward(self, x, freqs_cis):
+        x = x + self.drop_path(self.gamma_1 * self.attn(self.norm1(x), freqs_cis=freqs_cis))
+        x = x + self.drop_path(self.gamma_2 * self.mlp(self.norm2(x)))
+        
+        return x
+
+# Performer standard
 @register_model
-def deit_small_patch16_LS_performer(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+def performer_deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
     model = vit_models(
         img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),block_layers=Layer_scale_init_Block, 
@@ -215,4 +229,26 @@ def deit_small_patch16_LS_performer(pretrained=False, img_size=224, pretrained_2
         )
         model.load_state_dict(checkpoint["model"])
 
+    return model
+
+
+# Performer RoPE-Axial
+@register_model
+def performer_rope_axial_deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, 
+        Attention_block=PerformerRoPEAttention,
+        rope_theta=100.0, rope_mixed=False, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# Performer RoPE-Axial + APE
+@register_model
+def performer_rope_axial_ape_deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=100.0, rope_mixed=False, use_ape=True, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
     return model

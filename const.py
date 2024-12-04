@@ -1,6 +1,6 @@
 ARGS = {
         # distributed
-        "distributed": False, 
+        "distributed": True, 
         "dist_url": 'env://',
         "repeated_aug": True,
         "dist_eval": True, 
@@ -9,7 +9,7 @@ ARGS = {
         "eval_crop_ratio": 1.0,
         "eval": False, # SET TO TRUE IF PERFORM EVAL ONLY
         "finetune": "", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
-        "batch_size": 32, # batch size for training: 256, batch size for eval: 128
+        "batch_size": 256, # batch size for training: 256, batch size for eval: 128
         "input_size" : 224, # 224 for training
 
         "output_dir" : "ieor6617_output/performer_test/",
@@ -22,7 +22,7 @@ ARGS = {
         "resume": "", # resume from checkpoint i.e. ieor6617_output/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth
         "start_epoch": 0, # epoch to resume from
         "epochs": 1, # num epochs
-        "model" : "deit_small_patch16_LS_performer",
+        "model" : "rope_mixed_deit_small_patch16_LS",
         "drop"  : 0.0, # dropout rate
         "drop_path" : 0.0, # dropout path rate
         "bce_loss": True,
