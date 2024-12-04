@@ -1,7 +1,9 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 """
-IEOR6617: I took this from https://github.com/naver-ai/rope-vit/tree/main/deit
+IEOR6617: I took this primarily from https://github.com/naver-ai/rope-vit/tree/main/deit
+with slight changes to enable Performer architecture
+
 """
 import torch
 import torch.nn as nn
@@ -11,6 +13,46 @@ from timm.models.vision_transformer import Mlp, PatchEmbed , _cfg
 
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from timm.models.registry import register_model
+
+
+
+def exists(val):
+    return val is not None
+
+"""
+This class is from https://github.com/lucidrains/performer-pytorch/blob/main/performer_pytorch/performer_pytorch.py
+"""
+class ProjectionUpdater(nn.Module):
+    def __init__(self, instance, feature_redraw_interval):
+        super().__init__()
+        self.instance = instance
+        self.feature_redraw_interval = feature_redraw_interval
+        self.register_buffer('calls_since_last_redraw', torch.tensor(0))
+
+    def fix_projections_(self):
+        self.feature_redraw_interval = None
+
+    def redraw_projections(self):
+        model = self.instance
+
+        if not self.training:
+            return
+
+        if exists(self.feature_redraw_interval) and self.calls_since_last_redraw >= self.feature_redraw_interval:
+            device = get_module_device(model)
+
+            fast_attentions = find_modules(model, FastAttention)
+            for fast_attention in fast_attentions:
+                fast_attention.redraw_projection_matrix(device)
+
+            self.calls_since_last_redraw.zero_()
+            return
+
+        self.calls_since_last_redraw += 1
+
+    def forward(self, x):
+        raise NotImplemented
+
 
 class Attention(nn.Module):
     # taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
@@ -182,7 +224,12 @@ class vit_models(nn.Module):
                  Patch_layer=PatchEmbed,act_layer=nn.GELU,
                  Attention_block = Attention, Mlp_block=Mlp,
                 dpr_constant=True,init_scale=1e-4,
-                mlp_ratio_clstk = 4.0,**kwargs):
+                mlp_ratio_clstk = 4.0,
+                # Performer parameters:
+                use_performer = False,
+                feature_redraw_interval=1000,
+                auto_check_redraw = True,
+                **kwargs):
         super().__init__()
         
         self.dropout_rate = drop_rate
@@ -207,9 +254,6 @@ class vit_models(nn.Module):
                 act_layer=act_layer,Attention_block=Attention_block,Mlp_block=Mlp_block,init_values=init_scale)
             for i in range(depth)])
         
-
-        
-            
         self.norm = norm_layer(embed_dim)
 
         self.feature_info = [dict(num_chs=embed_dim, reduction=0, module='head')]
@@ -218,6 +262,12 @@ class vit_models(nn.Module):
         trunc_normal_(self.pos_embed, std=.02)
         trunc_normal_(self.cls_token, std=.02)
         self.apply(self._init_weights)
+
+        # only if using performer architecture
+        self.use_performer = use_performer
+        self.auto_check_redraw = auto_check_redraw
+        if self.use_performer: 
+            self.proj_updater = ProjectionUpdater(self.blocks, feature_redraw_interval)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -242,6 +292,9 @@ class vit_models(nn.Module):
         self.num_classes = num_classes
         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
 
+    def fix_projection_matrices_(self):
+        self.proj_updater.feature_redraw_interval = None
+
     def forward_features(self, x):
         B = x.shape[0]
         x = self.patch_embed(x)
@@ -251,7 +304,12 @@ class vit_models(nn.Module):
         x = x + self.pos_embed
         
         x = torch.cat((cls_tokens, x), dim=1)
-            
+        
+        # only if using performer
+        if self.use_performer:
+            if self.auto_check_redraw:
+                self.proj_updater.redraw_projections()
+
         for i , blk in enumerate(self.blocks):
             x = blk(x)
             

@@ -9,6 +9,7 @@ import json
 import time
 from pathlib import Path
 import argparse 
+import gc
 
 # imports from project
 import const
@@ -18,6 +19,7 @@ import utils
 from augment import new_data_aug_generator
 import models_v2
 import models_v2_rope
+import performer 
 
 import numpy as np
 import torch
@@ -34,8 +36,10 @@ from timm.scheduler import create_scheduler
 #from timm.scheduler import create_scheduler
 
 def main(args):
-    print(args)
     
+    gc.collect()  # Force garbage collection
+    torch.cuda.empty_cache()  # Free up GPU memory
+
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
