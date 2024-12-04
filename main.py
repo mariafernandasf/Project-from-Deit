@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 import argparse 
 import gc
+import os
 
 # imports from project
 import const
@@ -20,6 +21,7 @@ from augment import new_data_aug_generator
 import models_v2
 import models_v2_rope
 import performer 
+from samplers import RASampler
 
 import numpy as np
 import torch
@@ -37,8 +39,8 @@ from timm.scheduler import create_scheduler
 
 def main(args):
     
-    gc.collect()  # Force garbage collection
-    torch.cuda.empty_cache()  # Free up GPU memory
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    utils.init_distributed_mode(args)
 
     device = torch.device(args.device)
 
@@ -50,10 +52,33 @@ def main(args):
     # pull datasets and number of output classes for the classification task
     dataset_train, args.nb_classes = build_dataset(is_train=True, args=args)
     dataset_val, _ = build_dataset(is_train=False, args=args)
-
-    # not running using distributed: 
-    sampler_train = torch.utils.data.RandomSampler(dataset_train)
-    sampler_val = torch.utils.data.SequentialSampler(dataset_val)
+    
+    # ADD DISTRIBUTED CODE 
+    if args.distributed:
+        num_tasks = utils.get_world_size()
+        global_rank = utils.get_rank()
+        if args.repeated_aug:
+            sampler_train = RASampler(
+                dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
+            )
+        else:
+            sampler_train = torch.utils.data.DistributedSampler(
+                dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=True
+            )
+        if args.dist_eval:
+            if len(dataset_val) % num_tasks != 0:
+                print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
+                      'This will slightly alter validation results as extra duplicate entries are added to achieve '
+                      'equal num of samples per-process.')
+            sampler_val = torch.utils.data.DistributedSampler(
+                dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False)
+        else:
+            sampler_val = torch.utils.data.SequentialSampler(dataset_val)
+            # END DISTRIBUTED CODE 
+    else: 
+        # not running using distributed: 
+        sampler_train = torch.utils.data.RandomSampler(dataset_train)
+        sampler_val = torch.utils.data.SequentialSampler(dataset_val)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
@@ -137,6 +162,9 @@ def main(args):
 
     model_ema = None
     model_without_ddp = model
+    if args.distributed:
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model_without_ddp = model.module
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
 
@@ -216,6 +244,10 @@ def main(args):
     start_time = time.time()
     max_accuracy = 0.0
     for epoch in range(args.start_epoch, args.epochs):
+        # distributed code
+        if args.distributed:
+            data_loader_train.sampler.set_epoch(epoch)
+        # end distributed code
         train_stats = train_one_epoch(
             model, criterion, data_loader_train,
             optimizer, device, epoch, loss_scaler,

@@ -39,7 +39,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if args.bce_loss:
             targets = targets.gt(0.0).type(targets.dtype)
          
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             outputs = model(samples)
             loss = criterion(outputs, targets)
 

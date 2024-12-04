@@ -152,7 +152,7 @@ class PerformerAttention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         
         # number of random features for performer
-        self.nb_features = 256
+        self.nb_features = 128
 
         inner_dim = head_dim * self.num_heads
         self.fast_attention = FastAttention(head_dim, 
