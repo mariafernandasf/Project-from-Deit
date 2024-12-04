@@ -1,6 +1,6 @@
 ARGS = {
         # distributed
-        "distributed": True, 
+        "distributed": False, 
         "dist_url": 'env://',
         "repeated_aug": True,
         "dist_eval": True, 
@@ -12,7 +12,7 @@ ARGS = {
         "batch_size": 256, # batch size for training: 256, batch size for eval: 128
         "input_size" : 224, # 224 for training
 
-        "output_dir" : "ieor6617_output/performer_test/",
+        "output_dir" : "ieor6617_output/",
         "train_mode" : True,
         "device" : "cuda", # cpu or cuda
         "seed": 0,
@@ -21,8 +21,8 @@ ARGS = {
         # model training params
         "resume": "", # resume from checkpoint i.e. ieor6617_output/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth
         "start_epoch": 0, # epoch to resume from
-        "epochs": 1, # num epochs
-        "model" : "rope_mixed_deit_small_patch16_LS",
+        "epochs": 100, # num epochs
+        "model" : "performer_rope_axial_deit_small_patch16_LS",
         "drop"  : 0.0, # dropout rate
         "drop_path" : 0.0, # dropout path rate
         "bce_loss": True,

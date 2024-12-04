@@ -17,6 +17,7 @@ from timm.models.vision_transformer import Mlp, PatchEmbed , _cfg
 from distutils.version import LooseVersion
 from einops import rearrange, repeat
 
+
 TORCH_GE_1_8_0 = LooseVersion(torch.__version__) >= LooseVersion('1.8.0')
 
 def exists(val):
@@ -65,6 +66,22 @@ def linear_attention(q, k, v):
     context = torch.einsum('...nd,...ne->...de', k, v)
     out = torch.einsum('...de,...nd,...n->...ne', context, q, D_inv)
     return out
+
+def generalized_kernel(data, *, projection_matrix, kernel_fn = nn.ReLU(), kernel_epsilon = 0.001, normalize_data = True, device = None):
+    b, h, *_ = data.shape
+
+    data_normalizer = (data.shape[-1] ** -0.25) if normalize_data else 1.
+
+    if projection_matrix is None:
+        return kernel_fn(data_normalizer * data) + kernel_epsilon
+
+    projection = repeat(projection_matrix, 'j d -> b h j d', b = b, h = h)
+    projection = projection.type_as(data)
+
+    data_dash = torch.einsum('...id,...jd->...ij', (data_normalizer * data), projection)
+
+    data_prime = kernel_fn(data_dash) + kernel_epsilon
+    return data_prime.type_as(data)
 
 def softmax_kernel(data, *, projection_matrix, is_query, normalize_data=True, eps=1e-4, device = None):
     b, h, *_ = data.shape
@@ -116,8 +133,9 @@ class FastAttention(nn.Module):
         self.generalized_attention = generalized_attention
         self.kernel_fn = kernel_fn
 
-        # if this is turned on, no projection will be used
+        # if this is turned on, no projection will be used 
         # queries and keys will be softmax-ed as in the original efficient attention paper
+        # useful for testing purposes
         self.no_projection = no_projection
 
     @torch.no_grad()
@@ -129,9 +147,16 @@ class FastAttention(nn.Module):
     def forward(self, q, k, v):
         device = q.device
 
-        create_kernel = partial(softmax_kernel, projection_matrix = self.projection_matrix, device = device)
-        q = create_kernel(q, is_query = True)
-        k = create_kernel(k, is_query = False)
+        if self.no_projection:
+            q = q.softmax(dim = -1)
+            k = k.softmax(dim = -2)
+        elif self.generalized_attention:
+            create_kernel = partial(generalized_kernel, kernel_fn = self.kernel_fn, projection_matrix = self.projection_matrix, device = device)
+            q, k = map(create_kernel, (q, k))
+        else:
+            create_kernel = partial(softmax_kernel, projection_matrix = self.projection_matrix, device = device)
+            q = create_kernel(q, is_query = True)
+            k = create_kernel(k, is_query = False)
 
         attn_fn = linear_attention 
         out = attn_fn(q, k, v)
@@ -153,13 +178,14 @@ class PerformerAttention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
         
         # number of random features for performer
-        self.nb_features = 64
+        self.nb_features = 256
 
         inner_dim = head_dim * self.num_heads
         self.fast_attention = FastAttention(head_dim, 
                                             self.nb_features, 
                                             causal = False, 
                                             generalized_attention = False, 
+                                            kernel_fn = nn.ReLU(),
                                             no_projection = False)
         
         self.proj = nn.Linear(inner_dim, dim)
