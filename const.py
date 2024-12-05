@@ -7,12 +7,12 @@ ARGS = {
 
         # model params that need to be changed for eval
         "eval_crop_ratio": 1.0,
-        "eval": False, # SET TO TRUE IF PERFORM EVAL ONLY
-        "finetune": "", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
-        "batch_size": 256, # batch size for training: 256, batch size for eval: 128
-        "input_size" : 224, # 224 for training
+        "eval": True, # SET TO TRUE IF PERFORM EVAL ONLY
+        "finetune": "ieor6617_output/L4/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
+        "batch_size": 128, # batch size for training: 256, batch size for eval: 128
+        "input_size" : 512, # 224 for training, 144, 192, 224, 256, 320, 384, 512 for testing
 
-        "output_dir" : "ieor6617_output/",
+        "output_dir" : "ieor6617_output/L4/",
         "train_mode" : True,
         "device" : "cuda", # cpu or cuda
         "seed": 0,
@@ -22,7 +22,7 @@ ARGS = {
         "resume": "", # resume from checkpoint i.e. ieor6617_output/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth
         "start_epoch": 0, # epoch to resume from
         "epochs": 100, # num epochs
-        "model" : "performer_rope_axial_deit_small_patch16_LS",
+        "model" : "rope_axial_ape_deit_small_patch16_LS",
         "drop"  : 0.0, # dropout rate
         "drop_path" : 0.0, # dropout path rate
         "bce_loss": True,
