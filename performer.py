@@ -61,8 +61,8 @@ def gaussian_orthogonal_random_matrix(nb_rows, nb_columns, scaling = 0, device =
 
 def linear_attention(q, k, v):
     k_cumsum = k.sum(dim = -2)
-    eps = 1e-6
-    denom = (torch.einsum('...nd,...d->...n', q, k_cumsum.type_as(q)) + eps)
+    numerical_stabilizer = 1e-6
+    denom = (torch.einsum('...nd,...d->...n', q, k_cumsum.type_as(q)) + numerical_stabilizer)
     D_inv = 1. / denom
     context = torch.einsum('...nd,...ne->...de', k, v)
     out = torch.einsum('...de,...nd,...n->...ne', context, q, D_inv)
