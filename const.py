@@ -12,11 +12,7 @@ ARGS = {
         "batch_size": 128, # batch size for training: 256, batch size for eval: 128
         "input_size" : 512, # 224 for training, 144, 192, 224, 256, 320, 384, 512 for testing
 
-<<<<<<< HEAD
-        "output_dir" : "ieor6617_output/L4/",
-=======
         "output_dir" : "ieor6617_output/A100/",
->>>>>>> 27a519f (add constants for scheduler and optimizer, add eps to performer)
         "train_mode" : True,
         "device" : "cuda", # cpu or cuda
         "seed": 0,
