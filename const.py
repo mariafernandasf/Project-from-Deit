@@ -7,10 +7,10 @@ ARGS = {
 
         # model params that need to be changed for eval
         "eval_crop_ratio": 1.0,
-        "eval": True, # SET TO TRUE IF PERFORM EVAL ONLY
-        "finetune": "ieor6617_output/L4/rope_axial_ape_deit_small_patch16_LS/checkpoint.pth", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
-        "batch_size": 128, # batch size for training: 256, batch size for eval: 128
-        "input_size" : 512, # 224 for training, 144, 192, 224, 256, 320, 384, 512 for testing
+        "eval": False, # SET TO TRUE IF PERFORM EVAL ONLY
+        "finetune": "", # checkpoint file IF EVAL i.e. ieor6617_output/rope_axial_deit_small_patch16_LS/checkpoint.pth
+        "batch_size": 256, # batch size for training: 256, batch size for eval: 128
+        "input_size" : 224, # 224 for training, 144, 192, 224, 256, 320, 384, 512 for testing
 
         "output_dir" : "ieor6617_output/A100/",
         "train_mode" : True,
