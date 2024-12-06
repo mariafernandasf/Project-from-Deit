@@ -8,6 +8,7 @@ with slight changes to enable Performer architecture
 import torch
 import torch.nn as nn
 from functools import partial
+import torch.nn.functional as F
 
 from timm.models.vision_transformer import Mlp, PatchEmbed , _cfg
 

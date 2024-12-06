@@ -28,6 +28,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
+ 
+    i = 0
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
         samples = samples.to(device, non_blocking=True)
         targets = targets.to(device, non_blocking=True)
@@ -48,7 +50,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             sys.exit(1)
-
+        i += 1
         optimizer.zero_grad()
 
         # this attribute is added by timm on one optimizer (adahessian)

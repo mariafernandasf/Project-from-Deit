@@ -17,7 +17,6 @@ from timm.models.vision_transformer import Mlp, PatchEmbed , _cfg
 from distutils.version import LooseVersion
 from einops import rearrange, repeat
 
-
 TORCH_GE_1_8_0 = LooseVersion(torch.__version__) >= LooseVersion('1.8.0')
 
 def exists(val):
@@ -62,7 +61,9 @@ def gaussian_orthogonal_random_matrix(nb_rows, nb_columns, scaling = 0, device =
 
 def linear_attention(q, k, v):
     k_cumsum = k.sum(dim = -2)
-    D_inv = 1. / torch.einsum('...nd,...d->...n', q, k_cumsum.type_as(q))
+    eps = 1e-6
+    denom = (torch.einsum('...nd,...d->...n', q, k_cumsum.type_as(q)) + eps)
+    D_inv = 1. / denom
     context = torch.einsum('...nd,...ne->...de', k, v)
     out = torch.einsum('...de,...nd,...n->...ne', context, q, D_inv)
     return out
@@ -213,12 +214,12 @@ class PerformerRoPEAttention(PerformerAttention):
         # apply embeddings
         q[:, :, 1:], k[:, :, 1:] = apply_rotary_emb(q[:, :, 1:], k[:, :, 1:], freqs_cis=freqs_cis)
         
-        x = self.fast_attention(q, k, v)
-        x = rearrange(x, 'b h n d -> b n (h d)')
-        x = self.proj(x)
-        x = self.proj_drop(x)
+        out = self.fast_attention(q, k, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        out = self.proj(out)
+        out = self.proj_drop(out)
         
-        return x
+        return out
 
 class Performer_RoPE_Layer_scale_init_Block(Layer_scale_init_Block):
     # taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
