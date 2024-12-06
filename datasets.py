@@ -66,6 +66,9 @@ def build_transform(is_train, args):
     if args.data_set == 'CIFAR10':
         mean = (0.4914, 0.4822, 0.4465)
         stdev = (0.2470, 0.2435, 0.2616)
+    elif args.data_set == 'CIFAR100':
+        mean = (0.5071, 0.4867, 0.4408)
+        stdev = (0.2675, 0.2565, 0.2761)
     else:
         mean = IMAGENET_DEFAULT_MEAN
         stdev = IMAGENET_DEFAULT_STD
