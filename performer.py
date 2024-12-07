@@ -84,7 +84,7 @@ def generalized_kernel(data, *, projection_matrix, kernel_fn = nn.ReLU(), kernel
     data_prime = kernel_fn(data_dash) + kernel_epsilon
     return data_prime.type_as(data)
 
-def softmax_kernel(data, *, projection_matrix, is_query, normalize_data=True, eps=1e-4, device = None):
+def softmax_kernel(data, *, projection_matrix, is_query, normalize_data=True, eps=1e-3, device = None):
     b, h, *_ = data.shape
 
     data_normalizer = (data.shape[-1] ** -0.25) if normalize_data else 1.
@@ -196,8 +196,6 @@ class PerformerAttention(nn.Module):
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
         
-        q = q * self.scale
-
         x = self.fast_attention(q, k, v)
         x = rearrange(x, 'b h n d -> b n (h d)')
         x = self.proj(x)
@@ -277,5 +275,25 @@ def performer_rope_axial_ape_deit_small_patch16_LS(pretrained=False, img_size=22
         img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
         rope_theta=100.0, rope_mixed=False, use_ape=True, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# RoPE-Mixed
+@register_model
+def performer_rope_mixed_deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=10.0, rope_mixed=True, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# RoPE-Mixed + APE
+@register_model
+def performer_rope_mixed_ape_deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=10.0, rope_mixed=True, use_ape=True, **kwargs)
     model.default_cfg = _cfg()
     return model
