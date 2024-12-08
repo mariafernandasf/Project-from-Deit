@@ -414,6 +414,7 @@ def deit_small_patch16_LS(pretrained=False, img_size=224, pretrained_21k = False
 
     return model
 
+@register_model
 def deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
     model = vit_models(
         img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,

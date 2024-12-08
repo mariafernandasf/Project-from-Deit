@@ -285,7 +285,7 @@ def rope_axial_ape_deit_small_patch8_LS(pretrained=False, img_size=224, pretrain
 
 # RoPE-Mixed + APE
 @register_model
-def rope_mixed_ape_deit_small_patch8LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+def rope_mixed_ape_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
     model = rope_vit_models(
         img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=RoPE_Layer_scale_init_Block, Attention_block=RoPEAttention,
