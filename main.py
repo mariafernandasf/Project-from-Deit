@@ -326,13 +326,11 @@ if __name__ == '__main__':
 
     # set parameters that change depending on eval/ train to avoid human error
     if args["eval"]:
-        args["batch_size"] = 128
         args["finetune"] = args["output_dir"] + "/checkpoint.pth"
         with (Path(args["output_dir"] + "/eval_params.txt")).open("a") as f:
             f.write(json.dumps(args))
             f.write("\n")
     else:
-        args["batch_size"] = 256
         args["finetune"] = ""
         with (Path(args["output_dir"] + "/train_params.txt")).open("a") as f:
             f.write(json.dumps(args))

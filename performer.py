@@ -150,3 +150,72 @@ def performer_rope_mixed_ape_deit_small_patch16_LS(pretrained=False, img_size=22
         rope_theta=10.0, rope_mixed=True, use_ape=True, **kwargs)
     model.default_cfg = _cfg()
     return model
+
+
+
+
+# Performer standard
+@register_model
+def performer_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = vit_models(
+        img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),block_layers=Layer_scale_init_Block, 
+        use_performer=True, Attention_block=PerformerAttention,
+        **kwargs)
+    model.default_cfg = _cfg()
+    if pretrained:
+        name = 'https://dl.fbaipublicfiles.com/deit/deit_3_small_'+str(img_size)+'_'
+        if pretrained_21k:
+            name+='21k.pth'
+        else:
+            name+='1k.pth'
+            
+        checkpoint = torch.hub.load_state_dict_from_url(
+            url=name,
+            map_location="cpu", check_hash=True
+        )
+        model.load_state_dict(checkpoint["model"])
+
+    return model
+
+
+# Performer RoPE-Axial
+@register_model
+def performer_rope_axial_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, 
+        Attention_block=PerformerRoPEAttention,
+        rope_theta=100.0, rope_mixed=False, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# Performer RoPE-Axial + APE
+@register_model
+def performer_rope_axial_ape_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=100.0, rope_mixed=False, use_ape=True, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# Performer RoPE-Mixed
+@register_model
+def performer_rope_mixed_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=10.0, rope_mixed=True, use_performer=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
+
+# Performer RoPE-Mixed + APE
+@register_model
+def performer_rope_mixed_ape_deit_small_patch8_LS(pretrained=False, img_size=224, pretrained_21k = False,  **kwargs):
+    model = rope_vit_models(
+        img_size = img_size, patch_size=8, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6), block_layers=Performer_RoPE_Layer_scale_init_Block, Attention_block=PerformerRoPEAttention,
+        rope_theta=10.0, rope_mixed=True, use_ape=True, **kwargs)
+    model.default_cfg = _cfg()
+    return model
