@@ -1,0 +1,7 @@
+{"num_test_images": 10000, "acc1": "62.2%", "acc5": "95.8%", "loss": 1.1394423628753085, "eval_time_str": "0:00:06", "eval_time_seconds": 6.861837387084961, "input_size": 224, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "53.7%", "acc5": "92.8%", "loss": 1.392238385272476, "eval_time_str": "0:00:03", "eval_time_seconds": 3.4473397731781006, "input_size": 144, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "60.0%", "acc5": "95.3%", "loss": 1.2077204641306176, "eval_time_str": "0:00:05", "eval_time_seconds": 5.366701602935791, "input_size": 192, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "63.1%", "acc5": "96.1%", "loss": 1.1186147332191467, "eval_time_str": "0:00:08", "eval_time_seconds": 8.554105997085571, "input_size": 256, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "64.5%", "acc5": "96.7%", "loss": 1.1182751655578613, "eval_time_str": "0:00:12", "eval_time_seconds": 12.732710123062134, "input_size": 320, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "62.9%", "acc5": "96.5%", "loss": 1.1692540803045597, "eval_time_str": "0:00:17", "eval_time_seconds": 17.48377299308777, "input_size": 384, "start_epoch": 0, "epochs": 100}
+{"num_test_images": 10000, "acc1": "61.0%", "acc5": "95.9%", "loss": 1.2537674094146152, "eval_time_str": "0:00:29", "eval_time_seconds": 29.70541000366211, "input_size": 512, "start_epoch": 0, "epochs": 100}
