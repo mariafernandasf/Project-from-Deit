@@ -10,6 +10,7 @@ import random
 import torch
 from torchvision import transforms
 from timm.data.transforms import RandomResizedCropAndInterpolation
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from PIL import ImageFilter, ImageOps
 
 
@@ -64,7 +65,16 @@ class gray_scale(object):
 def new_data_aug_generator(args = None):
     img_size = args.input_size
     remove_random_resized_crop = False
-    mean, std = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
+    if args.data_set == 'CIFAR10':
+        mean = (0.4914, 0.4822, 0.4465)
+        std = (0.2470, 0.2435, 0.2616)
+    elif args.data_set == 'CIFAR100':
+        mean = (0.5071, 0.4867, 0.4408)
+        std = (0.2675, 0.2565, 0.2761)
+    else:
+        mean = IMAGENET_DEFAULT_MEAN
+        std = IMAGENET_DEFAULT_STD
+
     primary_tfl = []
     scale=(0.08, 1.0)
     interpolation='bicubic'
